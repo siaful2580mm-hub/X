@@ -328,10 +328,6 @@ def kyc_page():
 def about_page():
     return render_template('about.html')
 
-
-# ==========================================================
-# ADMIN KYC MANAGEMENT CONTROLLER (/admin/kyc)
-# ==========================================================
 @app.route('/admin/kyc')
 @admin_required
 def admin_kyc_list():
@@ -340,13 +336,12 @@ def admin_kyc_list():
     limit = 20
     offset = (page - 1) * limit
 
-    # ২০টি করে কেওয়াইসি রিকোয়েস্ট আনা (ইউজারের নাম ও ইমেইল সহ)
-    kyc_res = sb.table('kyc_requests').select('*, users(name, email)') \
-        .order('id', desc=True).range(offset, offset + limit - 1).execute().data or []
+    query = sb.table('kyc_requests').select('*, users(name, email)').eq('status', 'pending')
 
-    # মোট কেওয়াইসি সংখ্যা গণনা
-    all_kyc = sb.table('kyc_requests').select('id').execute().data or []
-    total_count = len(all_kyc)
+    kyc_res = query.order('id', desc=True).range(offset, offset + limit - 1).execute().data or []
+
+    all_pending = sb.table('kyc_requests').select('id').eq('status', 'pending').execute().data or []
+    total_count = len(all_pending)
     has_next = (offset + limit) < total_count
 
     return render_template(
@@ -356,6 +351,7 @@ def admin_kyc_list():
         has_next=has_next,
         total_count=total_count
     )
+    
 
 @app.route('/admin/kyc/<int:kyc_id>/approve', methods=['POST'])
 @admin_required
