@@ -328,6 +328,56 @@ def kyc_page():
 def about_page():
     return render_template('about.html')
 
+
+# ==========================================================
+# ADMIN KYC MANAGEMENT CONTROLLER (/admin/kyc)
+# ==========================================================
+@app.route('/admin/kyc')
+@admin_required
+def admin_kyc_list():
+    sb = get_supabase()
+    page = int(request.args.get('page', 1))
+    limit = 20
+    offset = (page - 1) * limit
+
+    # ২০টি করে কেওয়াইসি রিকোয়েস্ট আনা (ইউজারের নাম ও ইমেইল সহ)
+    kyc_res = sb.table('kyc_requests').select('*, users(name, email)') \
+        .order('id', desc=True).range(offset, offset + limit - 1).execute().data or []
+
+    # মোট কেওয়াইসি সংখ্যা গণনা
+    all_kyc = sb.table('kyc_requests').select('id').execute().data or []
+    total_count = len(all_kyc)
+    has_next = (offset + limit) < total_count
+
+    return render_template(
+        'admin/kyc.html', 
+        kyc_requests=kyc_res,
+        page=page,
+        has_next=has_next,
+        total_count=total_count
+    )
+
+@app.route('/admin/kyc/<int:kyc_id>/approve', methods=['POST'])
+@admin_required
+def admin_kyc_approve(kyc_id):
+    sb = get_supabase()
+    req = sb.table('kyc_requests').select('*').eq('id', kyc_id).single().execute().data
+    if not req or req.get('status') == 'approved':
+        flash("অবৈধ বা ইতিমধ্যে অনুমোদিত রিকোয়েস্ট!", "danger")
+        return redirect(url_for('admin_kyc_list'))
+
+    # কেওয়াইসি স্ট্যাটাস 'approved' করা
+    sb.table('kyc_requests').update({'status': 'approved'}).eq('id', kyc_id).execute()
+    flash("কেওয়াইসি সফলভাবে অ্যাপ্রুভ করা হয়েছে!", "success")
+    return redirect(url_for('admin_kyc_list'))
+
+@app.route('/admin/kyc/<int:kyc_id>/reject', methods=['POST'])
+@admin_required
+def admin_kyc_reject(kyc_id):
+    sb = get_supabase()
+    sb.table('kyc_requests').update({'status': 'rejected'}).eq('id', kyc_id).execute()
+    flash("কেওয়াইসি রিকোয়েস্টটি রিজেক্ট করা হয়েছে!", "warning")
+    return redirect(url_for('admin_kyc_list'))
     
 # ==========================================================
 # SPONSORSHIP & PARTNER PROGRAM CONTROLLER
