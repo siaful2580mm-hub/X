@@ -40,7 +40,9 @@ app.config['SESSION_REFRESH_EACH_REQUEST'] = True # প্রতিবার প
 @app.before_request
 def make_session_permanent():
     session.permanent = True
-    
+
+
+
 # ==========================================================
 # Vercel Path Fixer Middleware (404 এরর স্থায়ী সমাধান)
 # ==========================================================
